@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Autorizar Cadastros - Portal Saúde</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 50%, #60a5fa 100%);
+        }
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        .card-hover:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+        .status-pendente {
+            background: linear-gradient(135deg, #fbbf24, #f59e0b);
+        }
+        .status-aprovado {
+            background: linear-gradient(135deg, #10b981, #059669);
+        }
+        .status-rejeitado {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+        }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen">
+    <!-- Header -->
+    <header class="bg-white/10 backdrop-blur-md border-b border-white/20">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center py-4">
+                <div class="flex items-center space-x-3">
+                    <button onclick="voltarInicio()" class="text-white hover:text-blue-200 transition duration-200">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                        </svg>
+                    </button>
+                    <div>
+                        <h1 class="text-xl font-bold text-white">Autorizar Cadastros</h1>
+                        <p class="text-blue-100 text-sm">Gerenciar solicitações de cadastro</p>
+                    </div>
+                </div>
+                
+                <div class="flex items-center space-x-4">
+                    <div class="text-right">
+                        <p class="text-white font-medium">Administrador</p>
+                        <p class="text-blue-100 text-sm">Sistema</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Filtros e Estatísticas -->
+        <div class="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20 mb-8">
+            <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+                <div>
+                    <h2 class="text-2xl font-bold text-white mb-2">Solicitações de Cadastro</h2>
+                    <p class="text-blue-100">Analise e aprove novos profissionais</p>
+                </div>
+                
+                <div class="flex flex-wrap gap-4">
+                    <div class="bg-yellow-500 text-white px-4 py-2 rounded-lg text-center">
+                        <div class="font-bold text-lg" id="pendentesCount">0</div>
+                        <div class="text-sm">Pendentes</div>
+                    </div>
+                    <div class="bg-green-500 text-white px-4 py-2 rounded-lg text-center">
+                        <div class="font-bold text-lg" id="aprovadosCount">0</div>
+                        <div class="text-sm">Aprovados</div>
+                    </div>
+                    <div class="bg-red-500 text-white px-4 py-2 rounded-lg text-center">
+                        <div class="font-bold text-lg" id="rejeitadosCount">0</div>
+                        <div class="text-sm">Rejeitados</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Filtros -->
+            <div class="mt-6 flex flex-wrap gap-4">
+                <select id="filtroStatus" class="px-4 py-2 rounded-lg bg-white border border-gray-200 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="todos">Todos os Status</option>
+                    <option value="pendente">Pendentes</option>
+                    <option value="aprovado">Aprovados</option>
+                    <option value="rejeitado">Rejeitados</option>
+                </select>
+                
+                <select id="filtroCargo" class="px-4 py-2 rounded-lg bg-white border border-gray-200 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="todos">Todos os Cargos</option>
+                    <option value="medico">Médico</option>
+                    <option value="enfermeiro">Enfermeiro</option>
+                    <option value="dentista">Dentista</option>
+                    <option value="farmaceutico">Farmacêutico</option>
+                    <option value="outros">Outros</option>
+                </select>
+                
+                <input type="text" id="buscarNome" placeholder="Buscar por nome..." class="px-4 py-2 rounded-lg bg-white border border-gray-200 text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+        </div>
+
+        <!-- Lista de Solicitações -->
+        <div id="listaSolicitacoes" class="space-y-4">
+            <!-- Os cards serão gerados dinamicamente pelo JavaScript -->
+        </div>
+
+        <!-- Mensagem quando não há resultados -->
+        <div id="semResultados" class="text-center py-12 hidden">
+            <div class="text-white text-xl mb-2">Nenhuma solicitação encontrada</div>
+            <p class="text-blue-100">Tente ajustar os filtros de busca</p>
+        </div>
+    </main>
+
+    <!-- Modal de Detalhes -->
+    <div id="modalDetalhes" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 hidden z-50">
+        <div class="bg-white rounded-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-2xl font-bold text-gray-800">Detalhes da Solicitação</h3>
+                <button onclick="fecharModal()" class="text-gray-500 hover:text-gray-700">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            
+            <div id="conteudoModal">
+                <!-- Conteúdo será preenchido dinamicamente -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Array para armazenar as solicitações de cadastro
+        let solicitacoes = [];
+
+        // Função para renderizar as solicitações
+        function renderizarSolicitacoes(lista = solicitacoes) {
+            const container = document.getElementById('listaSolicitacoes');
+            const semResultados = document.getElementById('semResultados');
+            
+            if (lista.length === 0) {
+                container.innerHTML = '';
+                semResultados.classList.remove('hidden');
+                return;
+            }
+            
+            semResultados.classList.add('hidden');
+            
+            container.innerHTML = lista.map(solicitacao => `
+                <div class="bg-white rounded-xl p-6 shadow-lg card-hover">
+                    <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-3 mb-2">
+                                <h3 class="text-xl font-bold text-gray-800">${solicitacao.nome}</h3>
+                                <span class="status-${solicitacao.status} text-white text-xs px-3 py-1 rounded-full font-medium">
+                                    ${solicitacao.status === 'pendente' ? 'Pendente' : 
+                                      solicitacao.status === 'aprovado' ? 'Aprovado' : 'Rejeitado'}
+                                </span>
+                            </div>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-gray-600 mb-3">
+                                <div><strong>CPF:</strong> ${solicitacao.cpf}</div>
+                                <div><strong>Email:</strong> ${solicitacao.email}</div>
+                                <div><strong>Cargo:</strong> ${solicitacao.cargoTexto}</div>
+                                <div><strong>Registro:</strong> ${solicitacao.registro || 'Não obrigatório'}</div>
+                                <div><strong>Município:</strong> ${solicitacao.municipio}</div>
+                                <div><strong>Data:</strong> ${formatarData(solicitacao.dataSolicitacao)}</div>
+                            </div>
+                        </div>
+                        
+                        <div class="flex flex-col sm:flex-row gap-2">
+                            <button 
+                                onclick="verDetalhes(${solicitacao.id})" 
+                                class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition duration-200 text-sm"
+                            >
+                                Ver Detalhes
+                            </button>
+                            
+                            ${solicitacao.status === 'pendente' ? `
+                                <button 
+                                    onclick="aprovarSolicitacao(${solicitacao.id})" 
+                                    class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition duration-200 text-sm"
+                                >
+                                    Aprovar
+                                </button>
+                                <button 
+                                    onclick="rejeitarSolicitacao(${solicitacao.id})" 
+                                    class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition duration-200 text-sm"
+                                >
+                                    Rejeitar
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Função para formatar data
+        function formatarData(data) {
+            return new Date(data).toLocaleDateString('pt-BR');
+        }
+
+        // Função para aprovar solicitação
+        function aprovarSolicitacao(id) {
+            if (confirm('Tem certeza que deseja aprovar esta solicitação?')) {
+                const solicitacao = solicitacoes.find(s => s.id === id);
+                if (solicitacao) {
+                    solicitacao.status = 'aprovado';
+                    atualizarContadores();
+                    aplicarFiltros();
+                    alert(`Solicitação de ${solicitacao.nome} foi aprovada! O profissional agora pode fazer login no sistema.`);
+                }
+            }
+        }
+
+        // Função para rejeitar solicitação
+        function rejeitarSolicitacao(id) {
+            const motivo = prompt('Digite o motivo da rejeição (opcional):');
+            if (motivo !== null) {
+                const solicitacao = solicitacoes.find(s => s.id === id);
+                if (solicitacao) {
+                    solicitacao.status = 'rejeitado';
+                    solicitacao.motivoRejeicao = motivo;
+                    atualizarContadores();
+                    aplicarFiltros();
+                    alert(`Solicitação de ${solicitacao.nome} foi rejeitada.`);
+                }
+            }
+        }
+
+        // Função para ver detalhes
+        function verDetalhes(id) {
+            const solicitacao = solicitacoes.find(s => s.id === id);
+            if (solicitacao) {
+                const modal = document.getElementById('modalDetalhes');
+                const conteudo = document.getElementById('conteudoModal');
+                
+                conteudo.innerHTML = `
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Nome Completo</label>
+                                <div class="bg-gray-50 p-3 rounded-lg">${solicitacao.nome}</div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">CPF</label>
+                                <div class="bg-gray-50 p-3 rounded-lg">${solicitacao.cpf}</div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                                <div class="bg-gray-50 p-3 rounded-lg">${solicitacao.email}</div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Cargo/Função</label>
+                                <div class="bg-gray-50 p-3 rounded-lg">${solicitacao.cargoTexto}</div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Registro Profissional</label>
+                                <div class="bg-gray-50 p-3 rounded-lg">${solicitacao.registro || 'Não obrigatório para este cargo'}</div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">CEP</label>
+                                <div class="bg-gray-50 p-3 rounded-lg">${solicitacao.cep}</div>
+                            </div>
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Município</label>
+                                <div class="bg-gray-50 p-3 rounded-lg">${solicitacao.municipio}</div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Data da Solicitação</label>
+                                <div class="bg-gray-50 p-3 rounded-lg">${formatarData(solicitacao.dataSolicitacao)}</div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                                <div class="bg-gray-50 p-3 rounded-lg">
+                                    <span class="status-${solicitacao.status} text-white text-xs px-3 py-1 rounded-full font-medium">
+                                        ${solicitacao.status === 'pendente' ? 'Pendente' : 
+                                          solicitacao.status === 'aprovado' ? 'Aprovado' : 'Rejeitado'}
+                                    </span>
+                                </div>
+                            </div>
+                            ${solicitacao.motivoRejeicao ? `
+                                <div class="md:col-span-2">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Motivo da Rejeição</label>
+                                    <div class="bg-red-50 p-3 rounded-lg text-red-800">${solicitacao.motivoRejeicao}</div>
+                                </div>
+                            ` : ''}
+                        </div>
+                        
+                        ${solicitacao.status === 'pendente' ? `
+                            <div class="flex gap-3 pt-4 border-t">
+                                <button 
+                                    onclick="aprovarSolicitacao(${solicitacao.id}); fecharModal();" 
+                                    class="flex-1 bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded-lg transition duration-200"
+                                >
+                                    Aprovar Solicitação
+                                </button>
+                                <button 
+                                    onclick="rejeitarSolicitacao(${solicitacao.id}); fecharModal();" 
+                                    class="flex-1 bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded-lg transition duration-200"
+                                >
+                                    Rejeitar Solicitação
+                                </button>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+                
+                modal.classList.remove('hidden');
+            }
+        }
+
+        // Função para fechar modal
+        function fecharModal() {
+            document.getElementById('modalDetalhes').classList.add('hidden');
+        }
+
+        // Função para atualizar contadores
+        function atualizarContadores() {
+            const pendentes = solicitacoes.filter(s => s.status === 'pendente').length;
+            const aprovados = solicitacoes.filter(s => s.status === 'aprovado').length;
+            const rejeitados = solicitacoes.filter(s => s.status === 'rejeitado').length;
+            
+            document.getElementById('pendentesCount').textContent = pendentes;
+            document.getElementById('aprovadosCount').textContent = aprovados;
+            document.getElementById('rejeitadosCount').textContent = rejeitados;
+        }
+
+        // Função para aplicar filtros
+        function aplicarFiltros() {
+            const filtroStatus = document.getElementById('filtroStatus').value;
+            const filtroCargo = document.getElementById('filtroCargo').value;
+            const buscarNome = document.getElementById('buscarNome').value.toLowerCase();
+            
+            let listaFiltrada = solicitacoes;
+            
+            if (filtroStatus !== 'todos') {
+                listaFiltrada = listaFiltrada.filter(s => s.status === filtroStatus);
+            }
+            
+            if (filtroCargo !== 'todos') {
+                listaFiltrada = listaFiltrada.filter(s => s.cargo === filtroCargo);
+            }
+            
+            if (buscarNome) {
+                listaFiltrada = listaFiltrada.filter(s => 
+                    s.nome.toLowerCase().includes(buscarNome)
+                );
+            }
+            
+            renderizarSolicitacoes(listaFiltrada);
+        }
+
+        // Função para voltar ao início
+        function voltarInicio() {
+            alert('Voltando para inicio.html...');
+            // Em um sistema real: window.location.href = 'inicio.html';
+        }
+
+        // Event listeners para filtros
+        document.getElementById('filtroStatus').addEventListener('change', aplicarFiltros);
+        document.getElementById('filtroCargo').addEventListener('change', aplicarFiltros);
+        document.getElementById('buscarNome').addEventListener('input', aplicarFiltros);
+
+        // Fechar modal clicando fora
+        document.getElementById('modalDetalhes').addEventListener('click', function(e) {
+            if (e.target === this) {
+                fecharModal();
+            }
+        });
+
+        // Inicializar página
+        document.addEventListener('DOMContentLoaded', function() {
+            atualizarContadores();
+            renderizarSolicitacoes();
+        });
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9811d1f7033d6466',t:'MTc1ODIwODc1MS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>

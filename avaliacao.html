@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Avaliação de Vulnerabilidade - Portal Saúde</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 50%, #60a5fa 100%);
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        .progress-bar {
+            transition: width 0.3s ease;
+        }
+        .question-card {
+            transition: all 0.3s ease;
+        }
+        .question-card.active {
+            transform: scale(1.02);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .step-indicator {
+            transition: all 0.3s ease;
+        }
+        .step-indicator.active {
+            background: #3b82f6;
+            color: white;
+        }
+        .step-indicator.completed {
+            background: #10b981;
+            color: white;
+        }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen">
+    <!-- Header -->
+    <header class="bg-white/10 backdrop-blur-md border-b border-white/20">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center py-4">
+                <div class="flex items-center space-x-3">
+                    <button onclick="voltarInicio()" class="text-white hover:text-blue-200 transition duration-200">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                        </svg>
+                    </button>
+                    <div>
+                        <h1 class="text-xl font-bold text-white">Avaliação de Vulnerabilidade</h1>
+                        <p class="text-blue-100 text-sm" id="municipioUsuario">Campo Grande - MS</p>
+                    </div>
+                </div>
+                
+                <div class="flex items-center space-x-4">
+                    <div class="text-right">
+                        <p class="text-white font-medium" id="nomeUsuario">Dr. João Silva</p>
+                        <p class="text-blue-100 text-sm">Médico - CRM 12345-MS</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Indicador de Etapas -->
+        <div class="glass-card rounded-xl p-6 shadow-lg mb-8">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <div id="step1" class="step-indicator active w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold border-2 border-blue-600">1</div>
+                    <div class="w-16 h-1 bg-gray-300"></div>
+                    <div id="step2" class="step-indicator w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold border-2 border-gray-300 bg-gray-100">2</div>
+                    <div class="w-16 h-1 bg-gray-300"></div>
+                    <div id="step3" class="step-indicator w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold border-2 border-gray-300 bg-gray-100">3</div>
+                </div>
+                <div class="text-sm text-gray-600">
+                    <span id="stepText">Buscar Paciente</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Etapa 1: Busca de Paciente -->
+        <div id="etapaBusca" class="glass-card rounded-xl p-8 shadow-lg fade-in">
+            <div class="text-center mb-8">
+                <h2 class="text-3xl font-bold text-gray-800 mb-2">Buscar Paciente</h2>
+                <p class="text-gray-600">Digite o CPF do paciente para iniciar a avaliação</p>
+            </div>
+
+            <div class="max-w-md mx-auto">
+                <div class="mb-6">
+                    <label for="cpfBusca" class="block text-sm font-medium text-gray-700 mb-2">CPF do Paciente</label>
+                    <input type="text" id="cpfBusca" maxlength="14"
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-center text-lg"
+                        placeholder="000.000.000-00">
+                </div>
+                
+                <button onclick="buscarPaciente()" 
+                    class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition duration-200">
+                    Buscar Paciente
+                </button>
+            </div>
+
+            <!-- Resultado da Busca -->
+            <div id="resultadoBusca" class="hidden mt-8 max-w-md mx-auto">
+                <div class="border border-green-200 bg-green-50 rounded-lg p-4">
+                    <h3 class="font-medium text-green-800 mb-2">Paciente Encontrado</h3>
+                    <div id="dadosPaciente" class="text-sm text-green-700">
+                        <!-- Dados do paciente serão inseridos aqui -->
+                    </div>
+                    <button onclick="iniciarAvaliacao()" 
+                        class="mt-4 w-full bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition duration-200">
+                        Iniciar Avaliação
+                    </button>
+                </div>
+            </div>
+
+            <div id="pacienteNaoEncontrado" class="hidden mt-8 max-w-md mx-auto">
+                <div class="border border-red-200 bg-red-50 rounded-lg p-4 text-center">
+                    <p class="text-red-700 mb-4">Paciente não encontrado</p>
+                    <button onclick="irParaCadastro()" 
+                        class="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg transition duration-200">
+                        Cadastrar Novo Paciente
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Etapa 2: IVCF-20 -->
+        <div id="etapaIVCF" class="hidden glass-card rounded-xl p-8 shadow-lg fade-in">
+            <div class="text-center mb-8">
+                <h2 class="text-3xl font-bold text-gray-800 mb-2">IVCF-20</h2>
+                <p class="text-gray-600">Índice de Vulnerabilidade Clínico-Funcional</p>
+                <div class="mt-4">
+                    <div class="bg-gray-200 rounded-full h-2">
+                        <div id="progressoIVCF" class="progress-bar bg-blue-600 h-2 rounded-full" style="width: 0%"></div>
+                    </div>
+                    <p class="text-sm text-gray-600 mt-2">Pergunta <span id="perguntaAtualIVCF">1</span> de 20</p>
+                </div>
+            </div>
+
+            <div id="questoesIVCF">
+                <!-- Questões serão inseridas dinamicamente -->
+            </div>
+
+            <div class="flex justify-between mt-8">
+                <button id="voltarIVCF" onclick="voltarPerguntaIVCF()" 
+                    class="bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 px-6 rounded-lg transition duration-200 disabled:opacity-50" disabled>
+                    Anterior
+                </button>
+                <button id="proximoIVCF" onclick="proximaPerguntaIVCF()" 
+                    class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg transition duration-200 disabled:opacity-50" disabled>
+                    Próxima
+                </button>
+            </div>
+        </div>
+
+        <!-- Etapa 3: IVSF-10 -->
+        <div id="etapaIVSF" class="hidden glass-card rounded-xl p-8 shadow-lg fade-in">
+            <div class="text-center mb-8">
+                <h2 class="text-3xl font-bold text-gray-800 mb-2">IVSF-10</h2>
+                <p class="text-gray-600">Índice de Vulnerabilidade Social da Família</p>
+                <div class="mt-4">
+                    <div class="bg-gray-200 rounded-full h-2">
+                        <div id="progressoIVSF" class="progress-bar bg-green-600 h-2 rounded-full" style="width: 0%"></div>
+                    </div>
+                    <p class="text-sm text-gray-600 mt-2">Pergunta <span id="perguntaAtualIVSF">1</span> de 10</p>
+                </div>
+            </div>
+
+            <div id="questoesIVSF">
+                <!-- Questões serão inseridas dinamicamente -->
+            </div>
+
+            <div class="flex justify-between mt-8">
+                <button id="voltarIVSF" onclick="voltarPerguntaIVSF()" 
+                    class="bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 px-6 rounded-lg transition duration-200 disabled:opacity-50" disabled>
+                    Anterior
+                </button>
+                <button id="proximoIVSF" onclick="proximaPerguntaIVSF()" 
+                    class="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-6 rounded-lg transition duration-200 disabled:opacity-50" disabled>
+                    Próxima
+                </button>
+            </div>
+        </div>
+
+        <!-- Resultado Final -->
+        <div id="etapaResultado" class="hidden glass-card rounded-xl p-8 shadow-lg fade-in">
+            <div class="text-center mb-8">
+                <h2 class="text-3xl font-bold text-gray-800 mb-2">Avaliação Concluída</h2>
+                <p class="text-gray-600">Resultados dos índices de vulnerabilidade</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                    <h3 class="text-lg font-bold text-blue-800 mb-2">IVCF-20</h3>
+                    <p class="text-3xl font-bold text-blue-600" id="resultadoIVCF">0</p>
+                    <p class="text-sm text-blue-700" id="classificacaoIVCF">Classificação</p>
+                </div>
+
+                <div class="bg-green-50 border border-green-200 rounded-lg p-6">
+                    <h3 class="text-lg font-bold text-green-800 mb-2">IVSF-10</h3>
+                    <p class="text-3xl font-bold text-green-600" id="resultadoIVSF">0</p>
+                    <p class="text-sm text-green-700" id="classificacaoIVSF">Classificação</p>
+                </div>
+            </div>
+
+            <div class="text-center">
+                <button onclick="enviarParaValidacao()" 
+                    class="bg-purple-600 hover:bg-purple-700 text-white font-medium py-3 px-8 rounded-lg transition duration-200">
+                    Enviar para Validação
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Dados do usuário logado
+        const usuarioLogado = {
+            nome: "Dr. João Silva",
+            municipio: "Campo Grande - MS",
+            cargo: "Médico",
+            registro: "CRM 12345-MS"
+        };
+
+        // Variáveis globais
+        let pacienteSelecionado = null;
+        let perguntaAtualIVCF = 0;
+        let perguntaAtualIVSF = 0;
+        let respostasIVCF = {};
+        let respostasIVSF = {};
+
+        // Questões IVCF-20
+        const questoesIVCF = [
+            {
+                pergunta: "Qual a idade do idoso?",
+                tipo: "numero",
+                campo: "idade"
+            },
+            {
+                pergunta: "Como o(a) senhor(a) avalia sua saúde hoje?",
+                tipo: "radio",
+                opcoes: [
+                    { valor: 0, texto: "Muito boa" },
+                    { valor: 1, texto: "Boa" },
+                    { valor: 2, texto: "Regular" },
+                    { valor: 3, texto: "Ruim" },
+                    { valor: 4, texto: "Muito ruim" }
+                ]
+            },
+            {
+                pergunta: "Nos últimos 12 meses, quantas vezes o(a) senhor(a) foi internado(a)?",
+                tipo: "radio",
+                opcoes: [
+                    { valor: 0, texto: "Nenhuma vez" },
+                    { valor: 1, texto: "1 vez" },
+                    { valor: 2, texto: "2 ou mais vezes" }
+                ]
+            },
+            {
+                pergunta: "Quantas consultas médicas realizou nos últimos 12 meses?",
+                tipo: "radio",
+                opcoes: [
+                    { valor: 0, texto: "Nenhuma" },
+                    { valor: 1, texto: "1 a 2 consultas" },
+                    { valor: 2, texto: "3 a 5 consultas" },
+                    { valor: 3, texto: "6 ou mais consultas" }
+                ]
+            },
+            {
+                pergunta: "Teve alguma queda no último ano?",
+                tipo: "radio",
+                opcoes: [
+                    { valor: 0, texto: "Não" },
+                    { valor: 1, texto: "Sim, 1 queda" },
+                    { valor: 2, texto: "Sim, 2 ou mais quedas" }
+                ]
+            },
+            {
+                pergunta: "Tem dificuldade para enxergar?",
+                tipo: "radio",
+                opcoes: [
+                    { valor: 0, texto: "Não" },
+                    { valor: 1, texto: "Sim, pouca dificuldade" },
+                    { valor: 2, texto: "Sim, muita dificuldade" }
+                ]
+            },
+            {
+                pergunta: "Tem dificuldade para ouvir?",
+                tipo: "radio",
+                opcoes: [
+                    { valor: 0, texto: "Não" },
+                    { valor: 1, texto: "Sim, pouca dificuldade" },
+                    { valor: 2, texto: "Sim, muita dificuldade" }
+                ]
+            },
+            {
+                pergunta: "Tem perda involuntária de urina?",
+                tipo: "radio",
+                opcoes: [
+                    { valor: 0, texto: "Não" },
+                    { valor: 1, texto: "Sim, às vezes" },
+                    { valor: 2, texto: "Sim, frequentemente" }
+                ]
+            },
+            {
+                pergunta: "Apresenta esquecimento frequente?",
+                tipo: "radio",
+                opcoes: [
+                    { valor: 0, texto: "Não" },
+                    { valor: 1, texto: "Sim, às vezes" },
+                    { valor: 2, texto: "Sim, frequentemente" }
+                ]
+            },
+            {
+                pergunta: "Sente-se triste ou desanimado frequentemente?",
+                tipo: "radio",
+                opcoes: [
+                    { valor: 0, texto: "Não" },
+                    { valor: 1, texto: "Às vezes" },
+                    { valor: 2, texto: "Frequentemente" }
+                ]
+            },
+            {
+                pergunta: "Faz algum tipo de atividade física regularmente?",
+                tipo: "radio",
+                opcoes: [
+                    { valor: 0, texto: "Sim, regularmente" },
+                    { valor: 1, texto: "Às vezes" },
+                    { valor: 2, texto: "Não" }
+                ]
+            },
+            {
+                pergunta: "Quantos medicamentos diferentes utiliza por dia?",
+                tipo: "radio",
+                opcoes: [
+                    { valor: 0, texto: "Nenhum" },
+                    { valor: 1, texto: "1 a 3 medicamentos" },
+                    { valor: 2, texto: "4 a 6 medicamentos" },
+                    { valor: 3, texto: "7 ou mais medicamentos" }
+                ]
+            },
+            {
+                pergunta: "Consegue tomar banho sozinho(a)?",
+                tipo: "radio",
+                opcoes: [
+                    { valor: 0, texto: "Sim, sem dificuldade" },
+                    { valor: 1, texto: "Sim, com alguma dificuldade" },
+                    { valor: 2, texto: "Não consegue" }
+                ]
+            },
+            {
+                pergunta: "Consegue vestir-se sozinho(a)?",
+                tipo: "radio",
+                opcoes: [
+                    { valor: 0, texto: "Sim, sem dificuldade" },
+                    { valor: 1, texto: "Sim, com alguma dificuldade" },
+                    { valor: 2, texto: "Não consegue" }
+                ]
+            },
+            {
+                pergunta: "Consegue alimentar-se sozinho(a)?",
+                tipo: "radio",
+                opcoes: [
+                    { valor: 0, texto: "Sim, sem dificuldade" },
+                    { valor: 1, texto: "Sim, com alguma dificuldade" },
+                    { valor: 2, texto: "Não consegue" }
+                ]
+            },
+            {
+                pergunta: "Consegue ir ao banheiro sozinho(a)?",
+                tipo: "radio",
+                opcoes: [
+                    { valor: 0, texto: "Sim, sem dificuldade" },
+                    { valor: 1, texto: "Sim, com alguma dificuldade" },
+                    { valor: 2, texto: "Não consegue" }
+                ]
+            },
+            {
+                pergunta: "Consegue andar dentro de casa sem ajuda?",
+                tipo: "radio",
+                opcoes: [
+                    { valor: 0, texto: "Sim, sem dificuldade" },
+                    { valor: 1, texto: "Sim, com alguma dificuldade" },
+                    { valor: 2, texto: "Não consegue" }
+                ]
+            },
+            {
+                pergunta: "Consegue subir um lance de escada?",
+                tipo: "radio",
+                opcoes: [
+                    { valor: 0, texto: "Sim, sem dificuldade" },
+                    { valor: 1, texto: "Sim, com alguma dificuldade" },
+                    { valor: 2, texto: "Não consegue" }
+                ]
+            },
+            {
+                pergunta: "Consegue sair de casa sozinho(a)?",
+                tipo: "radio",
+                opcoes: [
+                    { valor: 0, texto: "Sim, sem dificuldade" },
+                    { valor: 1, texto: "Sim, com alguma dificuldade" },
+                    { valor: 2, texto: "Não consegue" }
+                ]
+            },
+            {
+                pergunta: "Mora sozinho(a) ou tem quem o(a) ajude se necessário?",
+                tipo: "radio",
+                opcoes: [
+                    { valor: 0, texto: "Tem apoio familiar/social adequado" },
+                    { valor: 1, texto: "Tem apoio limitado" },
+                    { valor: 2, texto: "Mora sozinho sem apoio" }
+                ]
+            }
+        ];
+
+        // Questões IVSF-10
+        const questoesIVSF = [
+            {
+                pergunta: "Quantas pessoas moram na residência?",
+                tipo: "radio",
+                opcoes: [
+                    { valor: 0, texto: "1 a 2 pessoas" },
+                    { valor: 1, texto: "3 a 4 pessoas" },
+                    { valor: 2, texto: "5 ou mais pessoas" }
+                ]
+            },
+            {
+                pergunta: "Há outros idosos no domicílio?",
+                tipo: "radio",
+                opcoes: [
+                    { valor: 0, texto: "Não" },
+                    { valor: 1, texto: "Sim, 1 idoso" },
+                    { valor: 2, texto: "Sim, 2 ou mais idosos" }
+                ]
+            },
+            {
+                pergunta: "Há crianças menores de 6 anos?",
+                tipo: "radio",
+                opcoes: [
+                    { valor: 0, texto: "Não" },
+                    { valor: 1, texto: "Sim, 1 criança" },
+                    { valor: 2, texto: "Sim, 2 ou mais crianças" }
+                ]
+            },
+            {
+                pergunta: "Há gestante na casa?",
+                tipo: "radio",
+                opcoes: [
+                    { valor: 0, texto: "Não" },
+                    { valor: 2, texto: "Sim" }
+                ]
+            },
+            {
+                pergunta: "Algum morador tem doença crônica ou deficiência?",
+                tipo: "radio",
+                opcoes: [
+                    { valor: 0, texto: "Não" },
+                    { valor: 1, texto: "Sim, 1 pessoa" },
+                    { valor: 2, texto: "Sim, 2 ou mais pessoas" }
+                ]
+            },
+            {
+                pergunta: "Há pessoas analfabetas na família?",
+                tipo: "radio",
+                opcoes: [
+                    { valor: 0, texto: "Não" },
+                    { valor: 1, texto: "Sim, 1 pessoa" },
+                    { valor: 2, texto: "Sim, 2 ou mais pessoas" }
+                ]
+            },
+            {
+                pergunta: "Qual a renda per capita da família?",
+                tipo: "radio",
+                opcoes: [
+                    { valor: 0, texto: "Mais de 1 salário mínimo" },
+                    { valor: 1, texto: "0,5 a 1 salário mínimo" },
+                    { valor: 2, texto: "Menos de 0,5 salário mínimo" }
+                ]
+            },
+            {
+                pergunta: "O domicílio é próprio, alugado ou cedido?",
+                tipo: "radio",
+                opcoes: [
+                    { valor: 0, texto: "Próprio" },
+                    { valor: 1, texto: "Alugado" },
+                    { valor: 2, texto: "Cedido/Ocupado" }
+                ]
+            },
+            {
+                pergunta: "A casa tem acesso a água tratada e esgoto?",
+                tipo: "radio",
+                opcoes: [
+                    { valor: 0, texto: "Sim, água tratada e esgoto" },
+                    { valor: 1, texto: "Apenas água tratada OU esgoto" },
+                    { valor: 2, texto: "Não tem água tratada nem esgoto" }
+                ]
+            },
+            {
+                pergunta: "A família consegue acesso adequado a serviços de saúde?",
+                tipo: "radio",
+                opcoes: [
+                    { valor: 0, texto: "Sim, acesso adequado" },
+                    { valor: 1, texto: "Acesso limitado" },
+                    { valor: 2, texto: "Não tem acesso adequado" }
+                ]
+            }
+        ];
+
+        // Aplicar máscara no CPF
+        document.getElementById('cpfBusca').addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, '');
+            value = value.replace(/(\d{3})(\d)/, '$1.$2');
+            value = value.replace(/(\d{3})(\d)/, '$1.$2');
+            value = value.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+            e.target.value = value;
+        });
+
+        // Buscar paciente
+        function buscarPaciente() {
+            const cpf = document.getElementById('cpfBusca').value;
+            if (!cpf) {
+                alert('Por favor, digite um CPF.');
+                return;
+            }
+
+            // Buscar nos pacientes cadastrados
+            const pacientes = JSON.parse(localStorage.getItem('pacientesCadastrados')) || [];
+            const paciente = pacientes.find(p => p.cpf === cpf);
+
+            if (paciente) {
+                pacienteSelecionado = paciente;
+                mostrarPacienteEncontrado(paciente);
+            } else {
+                mostrarPacienteNaoEncontrado();
+            }
+        }
+
+        function mostrarPacienteEncontrado(paciente) {
+            document.getElementById('resultadoBusca').classList.remove('hidden');
+            document.getElementById('pacienteNaoEncontrado').classList.add('hidden');
+            
+            document.getElementById('dadosPaciente').innerHTML = `
+                <p><strong>Nome:</strong> ${paciente.nomeCompleto}</p>
+                <p><strong>CPF:</strong> ${paciente.cpf}</p>
+                <p><strong>Idade:</strong> ${paciente.idade} anos</p>
+                <p><strong>Telefone:</strong> ${paciente.telefone}</p>
+            `;
+        }
+
+        function mostrarPacienteNaoEncontrado() {
+            document.getElementById('resultadoBusca').classList.add('hidden');
+            document.getElementById('pacienteNaoEncontrado').classList.remove('hidden');
+        }
+
+        function iniciarAvaliacao() {
+            // Mudar para etapa IVCF
+            document.getElementById('etapaBusca').classList.add('hidden');
+            document.getElementById('etapaIVCF').classList.remove('hidden');
+            
+            // Atualizar indicadores
+            document.getElementById('step1').classList.remove('active');
+            document.getElementById('step1').classList.add('completed');
+            document.getElementById('step2').classList.add('active');
+            document.getElementById('stepText').textContent = 'IVCF-20';
+            
+            // Carregar primeira pergunta
+            carregarPerguntaIVCF(0);
+        }
+
+        function carregarPerguntaIVCF(indice) {
+            perguntaAtualIVCF = indice;
+            const questao = questoesIVCF[indice];
+            
+            let html = `
+                <div class="question-card active bg-white border border-gray-200 rounded-lg p-6">
+                    <h3 class="text-lg font-medium text-gray-800 mb-4">${questao.pergunta}</h3>
+            `;
+
+            if (questao.tipo === 'numero') {
+                html += `
+                    <input type="number" id="resposta_${indice}" min="0" max="120"
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Digite a idade" onchange="salvarRespostaIVCF(${indice}, this.value)">
+                `;
+            } else if (questao.tipo === 'radio') {
+                questao.opcoes.forEach((opcao, i) => {
+                    html += `
+                        <label class="flex items-center p-3 border border-gray-200 rounded-lg mb-2 hover:bg-gray-50 cursor-pointer">
+                            <input type="radio" name="resposta_${indice}" value="${opcao.valor}" 
+                                onchange="salvarRespostaIVCF(${indice}, ${opcao.valor})"
+                                class="mr-3 text-blue-600 focus:ring-blue-500">
+                            <span class="text-gray-700">${opcao.texto}</span>
+                        </label>
+                    `;
+                });
+            }
+
+            html += '</div>';
+            document.getElementById('questoesIVCF').innerHTML = html;
+
+            // Restaurar resposta se existir
+            if (respostasIVCF[indice] !== undefined) {
+                if (questao.tipo === 'numero') {
+                    document.getElementById(`resposta_${indice}`).value = respostasIVCF[indice];
+                } else {
+                    const radio = document.querySelector(`input[name="resposta_${indice}"][value="${respostasIVCF[indice]}"]`);
+                    if (radio) radio.checked = true;
+                }
+            }
+
+            // Atualizar progresso
+            const progresso = ((indice + 1) / questoesIVCF.length) * 100;
+            document.getElementById('progressoIVCF').style.width = progresso + '%';
+            document.getElementById('perguntaAtualIVCF').textContent = indice + 1;
+
+            // Atualizar botões
+            document.getElementById('voltarIVCF').disabled = indice === 0;
+            document.getElementById('proximoIVCF').disabled = respostasIVCF[indice] === undefined;
+            
+            if (indice === questoesIVCF.length - 1) {
+                document.getElementById('proximoIVCF').textContent = 'Finalizar IVCF-20';
+            }
+        }
+
+        function salvarRespostaIVCF(indice, valor) {
+            respostasIVCF[indice] = parseInt(valor);
+            document.getElementById('proximoIVCF').disabled = false;
+        }
+
+        function proximaPerguntaIVCF() {
+            if (perguntaAtualIVCF < questoesIVCF.length - 1) {
+                carregarPerguntaIVCF(perguntaAtualIVCF + 1);
+            } else {
+                // Finalizar IVCF e ir para IVSF
+                iniciarIVSF();
+            }
+        }
+
+        function voltarPerguntaIVCF() {
+            if (perguntaAtualIVCF > 0) {
+                carregarPerguntaIVCF(perguntaAtualIVCF - 1);
+            }
+        }
+
+        function iniciarIVSF() {
+            // Mudar para etapa IVSF
+            document.getElementById('etapaIVCF').classList.add('hidden');
+            document.getElementById('etapaIVSF').classList.remove('hidden');
+            
+            // Atualizar indicadores
+            document.getElementById('step2').classList.remove('active');
+            document.getElementById('step2').classList.add('completed');
+            document.getElementById('step3').classList.add('active');
+            document.getElementById('stepText').textContent = 'IVSF-10';
+            
+            // Carregar primeira pergunta
+            carregarPerguntaIVSF(0);
+        }
+
+        function carregarPerguntaIVSF(indice) {
+            perguntaAtualIVSF = indice;
+            const questao = questoesIVSF[indice];
+            
+            let html = `
+                <div class="question-card active bg-white border border-gray-200 rounded-lg p-6">
+                    <h3 class="text-lg font-medium text-gray-800 mb-4">${questao.pergunta}</h3>
+            `;
+
+            questao.opcoes.forEach((opcao, i) => {
+                html += `
+                    <label class="flex items-center p-3 border border-gray-200 rounded-lg mb-2 hover:bg-gray-50 cursor-pointer">
+                        <input type="radio" name="resposta_ivsf_${indice}" value="${opcao.valor}" 
+                            onchange="salvarRespostaIVSF(${indice}, ${opcao.valor})"
+                            class="mr-3 text-green-600 focus:ring-green-500">
+                        <span class="text-gray-700">${opcao.texto}</span>
+                    </label>
+                `;
+            });
+
+            html += '</div>';
+            document.getElementById('questoesIVSF').innerHTML = html;
+
+            // Restaurar resposta se existir
+            if (respostasIVSF[indice] !== undefined) {
+                const radio = document.querySelector(`input[name="resposta_ivsf_${indice}"][value="${respostasIVSF[indice]}"]`);
+                if (radio) radio.checked = true;
+            }
+
+            // Atualizar progresso
+            const progresso = ((indice + 1) / questoesIVSF.length) * 100;
+            document.getElementById('progressoIVSF').style.width = progresso + '%';
+            document.getElementById('perguntaAtualIVSF').textContent = indice + 1;
+
+            // Atualizar botões
+            document.getElementById('voltarIVSF').disabled = indice === 0;
+            document.getElementById('proximoIVSF').disabled = respostasIVSF[indice] === undefined;
+            
+            if (indice === questoesIVSF.length - 1) {
+                document.getElementById('proximoIVSF').textContent = 'Finalizar Avaliação';
+            }
+        }
+
+        function salvarRespostaIVSF(indice, valor) {
+            respostasIVSF[indice] = parseInt(valor);
+            document.getElementById('proximoIVSF').disabled = false;
+        }
+
+        function proximaPerguntaIVSF() {
+            if (perguntaAtualIVSF < questoesIVSF.length - 1) {
+                carregarPerguntaIVSF(perguntaAtualIVSF + 1);
+            } else {
+                // Finalizar avaliação
+                finalizarAvaliacao();
+            }
+        }
+
+        function voltarPerguntaIVSF() {
+            if (perguntaAtualIVSF > 0) {
+                carregarPerguntaIVSF(perguntaAtualIVSF - 1);
+            }
+        }
+
+        function finalizarAvaliacao() {
+            // Calcular resultados
+            const resultadoIVCF = calcularIVCF();
+            const resultadoIVSF = calcularIVSF();
+
+            // Mostrar resultados
+            document.getElementById('etapaIVSF').classList.add('hidden');
+            document.getElementById('etapaResultado').classList.remove('hidden');
+            
+            // Atualizar indicadores
+            document.getElementById('step3').classList.remove('active');
+            document.getElementById('step3').classList.add('completed');
+            document.getElementById('stepText').textContent = 'Resultado';
+
+            // Exibir resultados
+            document.getElementById('resultadoIVCF').textContent = resultadoIVCF.pontuacao;
+            document.getElementById('classificacaoIVCF').textContent = resultadoIVCF.classificacao;
+            document.getElementById('resultadoIVSF').textContent = resultadoIVSF.pontuacao;
+            document.getElementById('classificacaoIVSF').textContent = resultadoIVSF.classificacao;
+        }
+
+        function calcularIVCF() {
+            let pontuacao = 0;
+            
+            // Somar todas as respostas
+            Object.values(respostasIVCF).forEach(valor => {
+                pontuacao += valor;
+            });
+
+            // Classificação baseada na pontuação
+            let classificacao;
+            if (pontuacao <= 6) {
+                classificacao = "Baixa vulnerabilidade";
+            } else if (pontuacao <= 13) {
+                classificacao = "Média vulnerabilidade";
+            } else {
+                classificacao = "Alta vulnerabilidade";
+            }
+
+            return { pontuacao, classificacao };
+        }
+
+        function calcularIVSF() {
+            let pontuacao = 0;
+            
+            // Somar todas as respostas
+            Object.values(respostasIVSF).forEach(valor => {
+                pontuacao += valor;
+            });
+
+            // Classificação baseada na pontuação
+            let classificacao;
+            if (pontuacao <= 5) {
+                classificacao = "Baixa vulnerabilidade social";
+            } else if (pontuacao <= 10) {
+                classificacao = "Média vulnerabilidade social";
+            } else {
+                classificacao = "Alta vulnerabilidade social";
+            }
+
+            return { pontuacao, classificacao };
+        }
+
+        function enviarParaValidacao() {
+            // Criar objeto da avaliação
+            const avaliacao = {
+                id: Date.now(),
+                paciente: pacienteSelecionado,
+                ivcf: {
+                    respostas: respostasIVCF,
+                    resultado: calcularIVCF()
+                },
+                ivsf: {
+                    respostas: respostasIVSF,
+                    resultado: calcularIVSF()
+                },
+                dataAvaliacao: new Date().toISOString(),
+                avaliadorPor: usuarioLogado.nome,
+                municipio: usuarioLogado.municipio,
+                status: 'pendente'
+            };
+
+            // Salvar na lista de avaliações pendentes
+            let avaliacoesPendentes = JSON.parse(localStorage.getItem('avaliacoesPendentes')) || [];
+            avaliacoesPendentes.unshift(avaliacao);
+            localStorage.setItem('avaliacoesPendentes', JSON.stringify(avaliacoesPendentes));
+
+            alert('Avaliação enviada para validação com sucesso!');
+            
+            // Redirecionar para validação
+            irParaValidacao();
+        }
+
+        function irParaValidacao() {
+            alert('Redirecionando para validacao.html...');
+            // Em um sistema real: window.location.href = 'validacao.html';
+        }
+
+        function irParaCadastro() {
+            alert('Redirecionando para cadastropacientes.html...');
+            // Em um sistema real: window.location.href = 'cadastropacientes.html';
+        }
+
+        function voltarInicio() {
+            alert('Voltando para inicio.html...');
+            // Em um sistema real: window.location.href = 'inicio.html';
+        }
+
+        // Inicializar página
+        document.addEventListener('DOMContentLoaded', function() {
+            // Definir informações do usuário
+            document.getElementById('nomeUsuario').textContent = usuarioLogado.nome;
+            document.getElementById('municipioUsuario').textContent = usuarioLogado.municipio;
+        });
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'98127d31851ce841',t:'MTc1ODIxNTc2NC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>

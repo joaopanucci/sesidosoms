@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Setup Sistema IdosoMS</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card shadow">
+                    <div class="card-header bg-primary text-white">
+                        <h4 class="mb-0">
+                            <i class="fas fa-cog me-2"></i>
+                            Setup Sistema IdosoMS
+                        </h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Primeira Configuração:</strong> 
+                            Este script irá criar o usuário administrador e dados iniciais do sistema.
+                        </div>
+
+                        <div id="setupStatus" class="mb-4" style="display: none;">
+                            <div class="alert alert-warning">
+                                <i class="fas fa-spinner fa-spin me-2"></i>
+                                Configurando sistema...
+                            </div>
+                        </div>
+
+                        <div id="setupResults" class="mb-4" style="display: none;">
+                            <pre class="bg-dark text-light p-3 rounded" style="height: 400px; overflow-y: auto;"></pre>
+                        </div>
+
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="card border-success">
+                                    <div class="card-header bg-success text-white">
+                                        <i class="fas fa-user-shield me-2"></i>Usuário Administrador
+                                    </div>
+                                    <div class="card-body">
+                                        <p><strong>CPF:</strong> 041.580.821-96</p>
+                                        <p><strong>Senha:</strong> panuccises</p>
+                                        <p><strong>Cargo:</strong> Administrador</p>
+                                        <p><strong>Município:</strong> Campo Grande</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card border-info">
+                                    <div class="card-header bg-info text-white">
+                                        <i class="fas fa-database me-2"></i>Dados Criados
+                                    </div>
+                                    <div class="card-body">
+                                        <p><i class="fas fa-check text-success me-2"></i>79 Municípios do MS</p>
+                                        <p><i class="fas fa-check text-success me-2"></i>4 Usuários de exemplo</p>
+                                        <p><i class="fas fa-check text-success me-2"></i>Estrutura de segurança</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="text-center">
+                            <button id="runSetup" class="btn btn-primary btn-lg me-3">
+                                <i class="fas fa-play me-2"></i>
+                                Executar Setup
+                            </button>
+                            <a href="login.html" class="btn btn-success btn-lg">
+                                <i class="fas fa-sign-in-alt me-2"></i>
+                                Ir para Login
+                            </a>
+                        </div>
+
+                        <div class="mt-4">
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                <strong>Importante:</strong> 
+                                Execute este setup apenas uma vez. Após a configuração inicial, 
+                                use o sistema normalmente através da página de login.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Modal -->
+    <div class="modal fade" id="loadingModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-body text-center p-4">
+                    <div class="spinner-border text-primary mb-3" role="status">
+                        <span class="visually-hidden">Carregando...</span>
+                    </div>
+                    <h5>Configurando Sistema</h5>
+                    <p class="text-muted">Aguarde enquanto criamos os dados iniciais...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script type="module">
+        // Importar o script de setup
+        import './setup-admin.js';
+
+        document.getElementById('runSetup').addEventListener('click', async () => {
+            const button = document.getElementById('runSetup');
+            const statusDiv = document.getElementById('setupStatus');
+            const resultsDiv = document.getElementById('setupResults');
+            const resultsContent = resultsDiv.querySelector('pre');
+            
+            // Mostrar loading
+            const loadingModal = new bootstrap.Modal(document.getElementById('loadingModal'));
+            loadingModal.show();
+            
+            button.disabled = true;
+            statusDiv.style.display = 'block';
+            resultsDiv.style.display = 'block';
+            resultsContent.innerHTML = '';
+
+            // Capturar console.log
+            const originalLog = console.log;
+            const originalError = console.error;
+            
+            console.log = function(...args) {
+                resultsContent.innerHTML += args.join(' ') + '\n';
+                resultsContent.scrollTop = resultsContent.scrollHeight;
+                originalLog.apply(console, args);
+            };
+            
+            console.error = function(...args) {
+                resultsContent.innerHTML += '❌ ' + args.join(' ') + '\n';
+                resultsContent.scrollTop = resultsContent.scrollHeight;
+                originalError.apply(console, args);
+            };
+
+            try {
+                // Executar setup
+                await window.setupSystem();
+                
+                // Esconder loading
+                loadingModal.hide();
+                
+                // Atualizar status
+                statusDiv.innerHTML = `
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-circle me-2"></i>
+                        Configuração concluída com sucesso!
+                    </div>
+                `;
+                
+                button.innerHTML = '<i class="fas fa-check me-2"></i>Setup Concluído';
+                button.classList.remove('btn-primary');
+                button.classList.add('btn-success');
+                
+            } catch (error) {
+                loadingModal.hide();
+                statusDiv.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Erro na configuração: ${error.message}
+                    </div>
+                `;
+                button.disabled = false;
+            } finally {
+                // Restaurar console
+                console.log = originalLog;
+                console.error = originalError;
+            }
+        });
+    </script>
+</body>
+</html>

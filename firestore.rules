@@ -1,0 +1,144 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && getUserData().cargo == 'Admin';
+    }
+    
+    function isGerente() {
+      return isAuthenticated() && getUserData().cargo == 'Gerente';
+    }
+    
+    function isCoordenador() {
+      return isAuthenticated() && getUserData().cargo == 'Coordenador';
+    }
+    
+    function isAgente() {
+      return isAuthenticated() && getUserData().cargo == 'Agente';
+    }
+    
+    function sameMunicipality(municipio) {
+      return isAuthenticated() && getUserData().municipio == municipio;
+    }
+    
+    // Users collection - usuários do sistema
+    match /users/{userId} {
+      // Qualquer usuário pode ler seu próprio documento
+      allow read: if isAuthenticated() && request.auth.uid == userId;
+      
+      // Admin e Gerente podem ler todos os usuários
+      allow read: if isAdmin() || isGerente();
+      
+      // Apenas Admin pode criar usuários (cadastro via sistema)
+      allow create: if isAdmin();
+      
+      // Usuário pode atualizar próprios dados, Admin pode atualizar qualquer usuário
+      allow update: if isAuthenticated() && 
+        (request.auth.uid == userId || isAdmin());
+      
+      // Apenas Admin pode deletar usuários
+      allow delete: if isAdmin();
+    }
+    
+    // Patients collection - pacientes cadastrados
+    match /patients/{patientId} {
+      // Leitura: todos os roles podem ver pacientes do mesmo município
+      allow read: if isAuthenticated() && sameMunicipality(resource.data.municipio);
+      
+      // Criação: Agente, Coordenador, Gerente e Admin podem cadastrar pacientes
+      allow create: if isAuthenticated() && 
+        (isAgente() || isCoordenador() || isGerente() || isAdmin()) &&
+        sameMunicipality(request.resource.data.municipio);
+      
+      // Atualização: mesmas permissões de criação + deve ser mesmo município
+      allow update: if isAuthenticated() && 
+        (isAgente() || isCoordenador() || isGerente() || isAdmin()) &&
+        sameMunicipality(request.resource.data.municipio);
+      
+      // Deleção: apenas Coordenador, Gerente e Admin
+      allow delete: if isAuthenticated() && 
+        (isCoordenador() || isGerente() || isAdmin()) &&
+        sameMunicipality(resource.data.municipio);
+    }
+    
+    // Evaluations collection - avaliações de vulnerabilidade
+    match /evaluations/{evaluationId} {
+      // Leitura: todos podem ver avaliações do mesmo município
+      allow read: if isAuthenticated() && sameMunicipality(resource.data.municipio);
+      
+      // Criação: Agente, Coordenador, Gerente e Admin podem criar avaliações
+      allow create: if isAuthenticated() && 
+        (isAgente() || isCoordenador() || isGerente() || isAdmin()) &&
+        sameMunicipality(request.resource.data.municipio);
+      
+      // Atualização: 
+      // - Agente pode editar apenas suas próprias avaliações pendentes
+      // - Coordenador, Gerente e Admin podem editar qualquer avaliação do município
+      allow update: if isAuthenticated() && 
+        sameMunicipality(request.resource.data.municipio) &&
+        (
+          (isAgente() && resource.data.criadoPor == request.auth.uid && resource.data.status == 'pendente') ||
+          isCoordenador() || isGerente() || isAdmin()
+        );
+      
+      // Deleção: apenas Coordenador, Gerente e Admin
+      allow delete: if isAuthenticated() && 
+        (isCoordenador() || isGerente() || isAdmin()) &&
+        sameMunicipality(resource.data.municipio);
+    }
+    
+    // Municipalities collection - municípios do estado
+    match /municipalities/{municipalityId} {
+      // Qualquer usuário autenticado pode ler informações dos municípios
+      allow read: if isAuthenticated();
+      
+      // Apenas Admin pode criar/editar/deletar municípios
+      allow write: if isAdmin();
+    }
+    
+    // System stats - estatísticas do sistema
+    match /stats/{statId} {
+      // Leitura: usuários podem ver stats do seu município
+      allow read: if isAuthenticated() && 
+        (resource.data.municipio == getUserData().municipio || isAdmin());
+      
+      // Apenas sistema pode escrever estatísticas
+      allow write: if false; // Será criado via Cloud Functions
+    }
+    
+    // Pending registrations - cadastros pendentes de aprovação
+    match /pendingRegistrations/{registrationId} {
+      // Leitura: apenas Gerente e Admin podem ver cadastros pendentes
+      allow read: if isGerente() || isAdmin();
+      
+      // Criação: qualquer um pode solicitar cadastro (tela de cadastro pública)
+      allow create: if true;
+      
+      // Atualização/Aprovação: apenas Gerente e Admin
+      allow update: if isGerente() || isAdmin();
+      
+      // Deleção: apenas Admin
+      allow delete: if isAdmin();
+    }
+    
+    // System logs - logs do sistema
+    match /systemLogs/{logId} {
+      // Apenas Admin pode ver logs
+      allow read: if isAdmin();
+      
+      // Sistema escreve logs automaticamente
+      allow write: if false; // Via Cloud Functions
+    }
+  }
+}
